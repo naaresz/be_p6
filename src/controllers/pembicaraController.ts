@@ -1,17 +1,24 @@
 import { Request, Response } from 'express';
-import { Speaker } from "../types/pembicara";
+import { prisma } from "../lib/db.js";
 
-let speakers: Speaker[] = [];
 
 //menampilkan semua pembicara
-export const getAllSpeakers = (req: Request, res: Response) => {
-    res.json(speakers);
+export const getAllSpeakers = async (req: Request, res: Response) => {
+    try {
+        const speakers = await prisma.speaker.findMany();
+        res.json(speakers);
+    } catch (error) {
+        res.status(500).json({
+            message: "Gagal mengambil Pembicara",
+            error,
+        });
+    }
 };
 
 // menampilkan data terbaru
-export const createSpeaker = (req: Request, res: Response) => {
+export const createSpeaker = async (req: Request, res: Response) => {
     try{
-        const { nama, jabatan, foto } = req.body;
+        const { nama, materi, jabatan, foto } = req.body;
 
         if (!nama || !jabatan || !foto){
             return res.status(500).json({
@@ -19,14 +26,14 @@ export const createSpeaker = (req: Request, res: Response) => {
             });
         }
 
-        const newSpeaker: Speaker = {
-            id: speakers.length + 1,
-            nama,
-            jabatan,
-            foto,
-        };
-
-        speakers.push(newSpeaker);
+        const newSpeaker = await prisma.speaker.create ({
+            data: {
+                nama, 
+                materi,
+                jabatan,
+                foto,
+            },
+        });
 
         res.status(201).json(newSpeaker);
     } catch (error) {
@@ -39,46 +46,61 @@ export const createSpeaker = (req: Request, res: Response) => {
 };
 
 // menampilkan data speaker berdasarkan id
-export const getSpeakerById = (req: Request, res: Response) => {
-    const id = Number(req.params.id);
-
-    const speaker = speakers.find((s) => s.id === id);
-
-    if (!speaker){
-        return res.status(404).json({
-            message: "Pembicara tidak ditemukan"
+export const getSpeakerById = async (req: Request, res: Response) => {
+    try{
+        const id = Number(req.params.id);
+        const speaker =  await prisma.speaker.findUnique({
+            where: { id }
         });
+        
+        if (!speaker){
+            return res.status(404).json({
+                message: "Pembicara tidak ditemukan"
+            });
+        }
+        res.json(speaker);
+    }catch (error){
+        res.status(500).json({message: "Terjadi kesalahan", error});
     }
-
-    res.json(speaker);
 };
 
 //Mengupdadte data speaker berdasarkan id
-export const updateSpeakerById = (req: Request, res: Response) => {
-    const id = Number(req.params.id);
+export const updateSpeakerById = async (req: Request, res: Response) => {
+    try {
+        const id = Number(req.params.id);
+        const { nama, materi, jabatan, foto } = req.body;
 
-    const speaker = speakers.find((s) => s.id === id);
+        const updateSpeakerById = await prisma.speaker.update({
+            where: { id },
+            data: {
+                nama,
+                materi,
+                jabatan,
+                foto,
+            },
+        });
+        res.json(updateSpeakerById);
 
-    if (!speaker) {
-        return res.status(404).json({
-            message: "Speaker tidak ditemukan"
+    } catch (error) {
+        res.status(500).json({
+            message: "Gagal update Pembicara",
+            error
         });
     }
-
-    speaker.nama = req.body.nama ?? speaker.nama;
-    speaker.jabatan = req.body.jabatan ?? speaker.jabatan;
-    speaker.foto = req.body.foto ?? speaker.foto;
-
-    res.json(speaker);
 };
 
 //Menghapus data pembicara berdasarkan id
-export const deleteSpeakerById = (req: Request, res:Response) => {
-    const id = Number(req.params.id);
+export const deleteSpeakerById = async (req: Request, res:Response) => {
+    
+    try {
+        const id = Number(req.params.id);
 
-    speakers = speakers.filter((s) => s.id !== id);
+        await prisma.speaker.delete({
+            where: { id },
+        });
 
-    res.json({
-        message: "Pembicara berhasil di hapus"
-    });
+        res.json({message: "Pembicara berhasil dihapus"});
+    } catch (error) {
+        res.status(500).json({message:"Gagal menghapus pembicara", error});
+    }
 };

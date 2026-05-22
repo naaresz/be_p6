@@ -5,7 +5,7 @@ import {
     getSpeakerById,
     updateSpeakerById,
     deleteSpeakerById
-} from "../controllers/pembicaraController";
+} from "../controllers/pembicaraController.js";
 
 const router = express.Router();
 
